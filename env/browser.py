@@ -10,6 +10,7 @@ import sys
 sys.path.append('.')
 
 from dsl.actions import Action, ActionType
+from env.axtree import AXTreeExtractor
 
 class BrowserController:
     """Controls browser using Playwright"""
@@ -19,6 +20,7 @@ class BrowserController:
         self.browser: Optional[Browser] = None
         self.page: Optional[Page] = None
         self.is_running = False
+        self.axtree_extractor = AXTreeExtractor()
     
     async def start(self):
         """Start browser"""
@@ -85,6 +87,44 @@ class BrowserController:
                 result["success"] = True
                 result["data"] = {"url": url, "title": await self.page.title()}
             
+            elif action.action_type == ActionType.SEARCH:
+                query = action.params.get("query", "")
+                
+                # Wait for page to load
+                await asyncio.sleep(1)
+                
+                # Try common search box selectors
+                search_selectors = [
+                    'input[name="search_query"]',  # YouTube
+                    'input[name="q"]',              # Google
+                    'input[type="search"]',         # Generic
+                    'input[aria-label*="Search" i]', # Aria labels
+                    'input[placeholder*="Search" i]', # Placeholder text
+                    '#search',                      # Common ID
+                    '.search-input',                # Common class
+                ]
+                
+                search_found = False
+                for selector in search_selectors:
+                    try:
+                        # Check if selector exists
+                        element = await self.page.query_selector(selector)
+                        if element:
+                            # Focus and type
+                            await self.page.fill(selector, query)
+                            # Press Enter to search
+                            await self.page.keyboard.press('Enter')
+                            search_found = True
+                            result["success"] = True
+                            result["data"] = {"query": query, "selector": selector}
+                            print(f"🔍 Searched for '{query}' using selector: {selector}")
+                            break
+                    except:
+                        continue
+                
+                if not search_found:
+                    result["error"] = "Could not find search box on page"
+            
             elif action.action_type == ActionType.CLICK:
                 selector = action.params.get("selector", "")
                 await self.page.click(selector)
@@ -136,6 +176,29 @@ class BrowserController:
             }
         except:
             return {}
+    
+    async def get_page_perception(self) -> Dict[str, Any]:
+        """Get AI-readable representation of current page"""
+        if not self.page:
+            return {"error": "No page loaded"}
+        
+        try:
+            # Extract AXTree
+            axtree = await self.axtree_extractor.extract_from_page(self.page)
+            
+            # Get text representation for AI
+            text_repr = self.axtree_extractor.to_text_representation(axtree)
+            
+            return {
+                "success": True,
+                "axtree": axtree,
+                "text": text_repr
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e)
+            }
 
 
 # Test function
