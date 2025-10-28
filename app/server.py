@@ -6,8 +6,10 @@ import os
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
+import mlx.core as mx
 import sys
 sys.path.append('.')
 import re
@@ -19,6 +21,15 @@ import asyncio
 
 # Initialize FastAPI
 app = FastAPI(title="NAEYLA-XS")
+
+# CORS Middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Load model and browser on startup
 print("🚀 Starting NAEYLA-XS server...")
@@ -84,7 +95,6 @@ async def chat(request: ChatRequest):
         
         # Extract actions from user message (only if model didn't generate any)
         user_actions = extract_actions_from_message(request.message, response)
-        
         
         # Prioritize user actions (keyword parser) over model actions for now
         all_actions = user_actions if user_actions else model_actions
