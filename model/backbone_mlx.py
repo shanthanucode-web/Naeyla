@@ -39,14 +39,19 @@ class NaeylaBackbone:
     def chat(
         self,
         message: str,
-        mode: str = "companion"
+        mode: str = "companion",
+        browser_enabled: bool = False
     ) -> str:
         """Chat with mode conditioning"""
         import sys
         sys.path.append('.')
-        from model.tokens import get_mode_prompt
-        
-        mode_prompt = get_mode_prompt(mode)
+
+        if browser_enabled:
+            from model.browser_prompts import get_browser_prompt
+            mode_prompt = get_browser_prompt(mode)
+        else:
+            from model.tokens import get_mode_prompt
+            mode_prompt = get_mode_prompt(mode)
         
         # Qwen chat template
         prompt = f"""<|im_start|>system
