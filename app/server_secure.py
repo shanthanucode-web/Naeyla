@@ -26,7 +26,15 @@ from dsl.actions import Action, ActionType, parse_action_from_text
 
 # ==================== SECURITY CONFIG ====================
 
-NAEYLA_TOKEN = os.getenv("NAEYLA_TOKEN", "naeyla-xs-dev-token-change-in-prod")
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+NAEYLA_TOKEN = os.getenv("NAEYLA_TOKEN")
+if not NAEYLA_TOKEN:
+    print("ERROR: NAEYLA_TOKEN not set in .env")
+    exit(1)
+
 
 ALLOWED_ACTIONS = {
     "navigate", "click", "type", "scroll", "screenshot", 
@@ -60,9 +68,14 @@ def get_token(
     token: Optional[str] = Query(None),
     authorization: Optional[str] = Header(None)
 ) -> str:
-    """Token validation disabled for now"""
-    # NAEYLA-XS is localhost-only, security is enforced at network level
-    return "ok"
+    if authorization:
+        if authorization.startswith("Bearer "):
+            token = authorization[7:].strip()
+    
+    if not token or token != NAEYLA_TOKEN:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    return token
 
 
 def validate_url(url: str) -> bool:
