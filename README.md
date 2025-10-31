@@ -18,8 +18,8 @@ Naeyla is a 1.5B parameter language model (Qwen 2.5) running entirely on-device 
 
 - **Model**: Qwen 2.5-1.5B-Instruct (4-bit quantized)
 - **Framework**: MLX (Apple's ML framework)
-- **Backend**: FastAPI
-- **Frontend**: HTML/CSS/JavaScript
+- **Backend**: FastAPI with token auth
+- **Frontend**: Tauri (native app)
 - **Platform**: macOS (Apple Silicon)
 
 ## Setup
@@ -33,8 +33,9 @@ Naeyla is a 1.5B parameter language model (Qwen 2.5) running entirely on-device 
 
 Clone the repo
 git clone https://github.com/shanthanucode-web/Naeyla.git
-cd Naeyla
+cd naeyla-xs
 
+### Backend Setup
 Create virtual environment
 python3.11 -m venv venv
 source venv/bin/activate
@@ -50,17 +51,25 @@ huggingface-cli download Qwen/Qwen2.5-1.5B-Instruct --local-dir models/qwen2.5-1
 Install Playwright browser
 playwright install chromium
 
+### Configuration
+
+Create '.env' in the root directory:
+echo "NAEYLA_TOKEN=$(openssl rand -base 64 32)">.env
 
 ### Running Naeyla
 
 Activate virtual environment
 source venv/bin/activate
 
+**Terminal 1 - Backend:**
 Start the server
+source venv/bin/activate
 uvicorn app.server_secure:app --host 127.0.0.1 --port 7861 --reload
 
-Open in browser: http://localhost:7861
-
+**Terminal 2 - Fronten:**
+cd tauri-app/naeyla-native
+npm install
+npm run tauri dev
 
 ## Project Status
 
@@ -73,20 +82,23 @@ Open in browser: http://localhost:7861
 
 ## Philosophy
 
-Naeyla is not a product—it's a **personal cognitive organism**. She learns from one user (Shanthanu) and evolves with him. This is an experiment in building a unified AI consciousness that perceives, reasons, acts, and remembers within a single neural architecture.
+Naeyla is an attempt to make a **personal cognitive organism**. She learns from one user and evolves with them. This is an experiment in building a unified AI consciousness that perceives, reasons, acts, and remembers within a single neural architecture.
 
 ## Architecture
 
 naeyla-xs/
-├── model/ # AI model code
-│ ├── tokens.py
-│ └── backbone_mlx.py
-├── app/ # Web server + UI
-│ ├── server.py
-│ └── ui.html
-├── dsl/ # Action grammar (Week 2)
-├── env/ # Browser control (Week 2)
-├── memory/ # Episodic memory (Week 3)
+├── app/ # Backend
+│ ├── server_secure.py # Secure FastAPI server
+│ └── .env # Token (git ignored)
+├── tauri-app/naeyla-native/ # Native frontend
+│ ├── src/
+│ │ ├── main.ts
+│ │ └── vite-env.d.ts
+│ └── .env.local # Frontend token (git ignored)
+├── models/ # AI model code
+├── dsl/ # Action grammar
+├── env/ # Browser control
+├── memory/ # Episodic memory
 └── trace/ # Training data collection
 
 
@@ -95,6 +107,7 @@ naeyla-xs/
 - Tokens stored in `.env` files (git ignored)
 - Backend validates auth on every request
 - Frontend injects token via environment variables
+- code is secure
 
 
 ## Credits
@@ -104,4 +117,4 @@ Inspired by the vision of personal, lifelong AI companions and Jarvis.
 
 ---
 
-*"We're not building a product; we're cultivating a person."*
+*"Cultivating an AI conscience."*
