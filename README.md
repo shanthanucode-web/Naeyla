@@ -1,4 +1,4 @@
-# 🧠 NAEYLA-XS
+# NAEYLA-XS
 
 **Personal AI Assistant running locally on M1 MacBook Air (8GB RAM)**
 
@@ -6,13 +6,13 @@ Naeyla is a 1.5B parameter language model (Qwen 2.5) running entirely on-device 
 
 ## Features
 
-- ✅ **Three personality modes**: Companion, Advisor, Guardian
-- ✅ **Beautiful web interface** with real-time chat
-- ✅ **Runs locally** on M1/M2 MacBook (8GB RAM minimum)
-- ✅ **Fast inference** using Apple Silicon optimization
-- 🔜 Browser automation (Week 2)
-- 🔜 Episodic memory system (Week 3)
-- 🔜 Personal learning via LoRA fine-tuning (Week 4+)
+- **Three personality modes**: Companion, Advisor, Guardian
+- **Beautiful web interface** with real-time chat
+- **Runs locally** on M1/M2 MacBook (8GB RAM minimum)
+- **Fast inference** using Apple Silicon optimization
+- Browser automation (coming soon)
+- Episodic memory system (coming soon)
+- Personal learning via LoRA fine-tuning (coming soon)
 
 ## Tech Stack
 
@@ -62,20 +62,20 @@ uvicorn app.server:app --port 7861 --reload
 Open in browser: http://localhost:7861
 
 
-## 📊 Project Status
+## Project Status
 
-**Week 1 - Day 1**: ✅ Complete
+**Week 1 - Day 1**: Complete
 - Model loading and inference working
 - Web interface functional
 - Three personality modes active
 
 **Next**: Browser automation + memory system
 
-## 💭 Philosophy
+## Philosophy
 
 Naeyla is not a product—it's a **personal cognitive organism**. She learns from one user (Shanthanu) and evolves with him. This is an experiment in building a unified AI consciousness that perceives, reasons, acts, and remembers within a single neural architecture.
 
-## 📁 Architecture
+## Architecture
 
 naeyla-xs/
 ├── model/ # AI model code
@@ -93,7 +93,7 @@ naeyla-xs/
 ## Credits
 
 Built by Shanthanu with guidance from Perplexity AI.  
-Inspired by the vision of personal, lifelong AI companions.
+Inspired by the vision of personal, lifelong AI companions and Jarvis.
 
 ---
 
