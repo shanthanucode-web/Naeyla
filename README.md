@@ -66,7 +66,7 @@ Start the server
 source venv/bin/activate
 uvicorn app.server_secure:app --host 127.0.0.1 --port 7861 --reload
 
-**Terminal 2 - Fronten:**
+**Terminal 2 - Frontend:**
 cd tauri-app/naeyla-native
 npm install
 npm run tauri dev
