@@ -2,7 +2,7 @@
 
 **Personal AI Assistant running locally on M1 MacBook Air (8GB RAM)**
 
-Naeyla is a 1.5B parameter language model (Qwen 2.5) running entirely on-device using Apple's MLX framework. No cloud, no API keys, just a personal AI companion.
+Naeyla is a 1.5B parameter language model (Qwen 2.5) running entirely on-device using Apple's MLX framework. No cloud, no external APIs, just a personal AI companion.
 
 ## Features
 
