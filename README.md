@@ -90,6 +90,13 @@ naeyla-xs/
 └── trace/ # Training data collection
 
 
+## Security
+
+- Tokens stored in `.env` files (git ignored)
+- Backend validates auth on every request
+- Frontend injects token via environment variables
+
+
 ## Credits
 
 Built by Shanthanu with guidance from Perplexity AI.  
