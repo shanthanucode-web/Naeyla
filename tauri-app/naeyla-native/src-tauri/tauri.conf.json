@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "identifier": "com.shanthanu.naeyla-native",
   "build": {
-    "beforeDevCommand": "sh scripts/start_backend.sh & npm run dev",
+    "beforeDevCommand": "./launch_backend.sh && npm run dev",
     "beforeBuildCommand": "npm run build",
     "devUrl": "http://localhost:1420",
     "frontendDist": "../dist"
