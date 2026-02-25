@@ -63,7 +63,7 @@ sequenceDiagram
 - URLs are validated to block localhost and non-HTTP(S) schemes.
 - Playwright runs in `env/browser.py` (non-headless by default).
 
-## Memory System
+## Memory Systems
 
 - `app/memory/embeddings.py` embeds text with `sentence-transformers`.
 - Embeddings and messages live in a SQLite DB at `data/memory.db`.
