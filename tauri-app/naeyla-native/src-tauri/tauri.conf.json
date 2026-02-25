@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "identifier": "com.shanthanu.naeyla-native",
   "build": {
-    "beforeDevCommand": "npm run dev",
-    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "./launch_backend.sh && npm run dev",
     "beforeBuildCommand": "npm run build",
+    "devUrl": "http://localhost:1420",
     "frontendDist": "../dist"
   },
   "app": {
@@ -29,7 +29,7 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; connect-src http://localhost:7861; style-src 'self' 'unsafe-inline';"
     }
   },
   "bundle": {

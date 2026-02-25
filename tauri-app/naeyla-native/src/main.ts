@@ -1,4 +1,5 @@
 import './styles.css';
+import { invoke } from '@tauri-apps/api/core';
 
 // Connect to FastAPI backend
 const API_URL = 'http://localhost:7861';
@@ -22,21 +23,64 @@ modeButtons.forEach(btn => {
     });
 });
 
-// NAEYLA Token - Keep this safe!
-const NAEYLA_TOKEN = import.meta.env.VITE_NAEYLA_TOKEN || 'default-dev-token';
+// NAEYLA Token - must be set in .env.local
+const NAEYLA_TOKEN: string = import.meta.env.VITE_NAEYLA_TOKEN;
+if (!NAEYLA_TOKEN) {
+    throw new Error('VITE_NAEYLA_TOKEN is not set. Create tauri-app/naeyla-native/.env.local with your token.');
+}
+let backendReady = false;
+
+function sleep(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function ensureBackendReady() {
+    try {
+        const ok = await invoke<boolean>('ensure_backend');
+        if (!ok) {
+            addMessage('Backend is taking longer than expected to start. Please wait a bit and try again.', 'naeyla');
+            return false;
+        }
+    } catch {
+        // If Tauri invoke fails (e.g., running in a browser), we still try HTTP health checks.
+    }
+
+    for (let attempt = 0; attempt < 12; attempt++) {
+        try {
+            const response = await fetch(`${API_URL}/health`, {
+                headers: {
+                    'Authorization': `Bearer ${NAEYLA_TOKEN}`
+                }
+            });
+            if (response.ok) {
+                backendReady = true;
+                return true;
+            }
+        } catch {
+            // ignore and retry
+        }
+        await sleep(500);
+    }
+
+    addMessage('Backend is not responding. Please check that it started successfully.', 'naeyla');
+    return false;
+}
 
 async function sendMessage() {
     const message = messageInput.value.trim();
     if (!message) return;
+
+    if (!backendReady) {
+        const ok = await ensureBackendReady();
+        if (!ok) return;
+    }
 
     addMessage(message, 'user');
     messageInput.value = '';
     typingIndicator.classList.remove('hidden');
 
     try {
-        console.log('Sending with Authorization:', `Bearer ${NAEYLA_TOKEN}`);  // DEBUG
-        
-        const response = await fetch(`${API_URL}/chat?token=${NAEYLA_TOKEN}`, {
+        const response = await fetch(`${API_URL}/chat`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -47,6 +91,17 @@ async function sendMessage() {
                 mode: currentMode
             })
         });
+
+        if (!response.ok) {
+            if (response.status === 401) {
+                addMessage('Auth error. Check that VITE_NAEYLA_TOKEN matches NAEYLA_TOKEN in the backend .env.', 'naeyla');
+                typingIndicator.classList.add('hidden');
+                return;
+            }
+            addMessage(`Backend error (${response.status}). Check backend logs.`, 'naeyla');
+            typingIndicator.classList.add('hidden');
+            return;
+        }
 
         const data = await response.json();
         typingIndicator.classList.add('hidden');
@@ -88,4 +143,5 @@ messageInput.addEventListener('keypress', (e) => {
 window.addEventListener('DOMContentLoaded', () => {
     messageInput.focus();
     console.log('Naeyla UI loaded! Make sure backend is running on http://localhost:7861');
+    ensureBackendReady();
 });

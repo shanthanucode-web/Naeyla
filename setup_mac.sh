@@ -27,11 +27,11 @@ echo "🐍 Python version: $PYTHON_VERSION"
 # Install dependencies
 echo "Installing Python packages..."
 pip install --quiet --upgrade pip
-pip install --quiet mlx mlx-lm transformers huggingface-hub
+pip install --quiet mlx mlx-lm transformers huggingface-hub python-dotenv
 
 # Install Playwright
 echo "🌐 Installing Playwright..."
-pip install --quiet playwright fastapi uvicorn python-multipart
+pip install --quiet playwright fastapi uvicorn python-multipart sentence-transformers numpy
 playwright install chromium
 
 # Verify MLX

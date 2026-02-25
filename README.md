@@ -1,18 +1,16 @@
 # NAEYLA-XS
 
-**Personal AI Assistant running locally on M1 MacBook Air (8GB RAM)**
+**Personal AI Assistant running locally on Apple Silicon**
 
 Naeyla is a 1.5B parameter language model (Qwen 2.5) running entirely on-device using Apple's MLX framework. No cloud, no external APIs, just a personal AI companion.
 
 ## Features
 
 - **Three personality modes**: Companion, Advisor, Guardian
-- **Beautiful web interface** with real-time chat
-- **Runs locally** on M1/M2 MacBook (8GB RAM minimum)
-- **Fast inference** using Apple Silicon optimization
-- Browser automation (coming soon)
-- Episodic memory system (coming soon)
-- Personal learning via LoRA fine-tuning (coming soon)
+- **Native desktop UI** with real-time chat (Tauri + Vite)
+- **Runs locally** on Apple Silicon with MLX acceleration
+- **Browser automation** via Playwright (experimental)
+- **Memory store scaffolding** (SQLite + embeddings; disabled by default)
 
 ## Tech Stack
 
@@ -22,12 +20,27 @@ Naeyla is a 1.5B parameter language model (Qwen 2.5) running entirely on-device 
 - **Frontend**: Tauri (native app)
 - **Platform**: macOS (Apple Silicon)
 
+## Quick Start
+
+Launch the native app (it will auto-start the backend if needed):
+```bash
+cd tauri-app/naeyla-native
+npm run tauri dev
+```
+
+Alternatively, run both in dev from the repo root:
+```bash
+npm run dev
+```
+
 ## Setup
 
 ### Requirements
 - macOS with Apple Silicon (M1/M2/M3)
 - 8GB+ RAM
 - Python 3.11+
+- Node.js 18+ and npm
+- Rust toolchain (for Tauri)
 
 ### Installation
 
@@ -42,7 +55,8 @@ source venv/bin/activate
 
 Install dependencies
 pip install mlx mlx-lm transformers huggingface-hub
-pip install fastapi uvicorn playwright python-multipart
+pip install fastapi uvicorn playwright python-multipart python-dotenv
+pip install sentence-transformers numpy
 
 Download the model (1.5GB)
 mkdir -p models
@@ -53,32 +67,36 @@ playwright install chromium
 
 ### Configuration
 
-Create '.env' in the root directory:
+Create `.env` in the root directory:
 echo "NAEYLA_TOKEN=$(openssl rand -base 64 32)">.env
+
+Create `tauri-app/naeyla-native/.env.local`:
+echo "VITE_NAEYLA_TOKEN=your_token_here" > tauri-app/naeyla-native/.env.local
+The frontend token must match `NAEYLA_TOKEN`.
 
 ### Running Naeyla
 
-Activate virtual environment
-source venv/bin/activate
+**Option A (recommended):**
+```bash
+cd tauri-app/naeyla-native
+npm run tauri dev
+```
 
-**Terminal 1 - Backend:**
+**Option B (manual, two terminals):**
+
+Terminal 1 - Backend
 Start the server
 source venv/bin/activate
 uvicorn app.server_secure:app --host 127.0.0.1 --port 7861 --reload
 
-**Terminal 2 - Fronten:**
+Terminal 2 - Frontend
 cd tauri-app/naeyla-native
 npm install
 npm run tauri dev
 
 ## Project Status
 
-**Week 1 - Day 1**: Complete
-- Model loading and inference working
-- Web interface functional
-- Three personality modes active
-
-**Next**: Browser automation + memory system
+Active development. Core chat flow and UI are working; browser actions are experimental; memory storage exists but is not yet integrated into chat responses by default.
 
 ## Philosophy
 
@@ -86,20 +104,24 @@ Naeyla is an attempt to make a **personal cognitive organism**. She learns from 
 
 ## Architecture
 
-naeyla-xs/
-├── app/ # Backend
-│ ├── server_secure.py # Secure FastAPI server
-│ └── .env # Token (git ignored)
-├── tauri-app/naeyla-native/ # Native frontend
-│ ├── src/
-│ │ ├── main.ts
-│ │ └── vite-env.d.ts
-│ └── .env.local # Frontend token (git ignored)
-├── models/ # AI model code
-├── dsl/ # Action grammar
-├── env/ # Browser control
-├── memory/ # Episodic memory
-└── trace/ # Training data collection
+See `ARCHITECTURE.md` for a concise codebase tour and a runtime sequence diagram.
+
+## Runtime Notes
+
+- The native app attempts to auto-start the backend on launch.
+- The MLX model is lazy-loaded on the first chat request to reduce startup load.
+- Memory indexing is disabled by default; enable with `NAEYLA_ENABLE_MEMORY=1`.
+
+## Dev Flags
+
+- `NAEYLA_EAGER_LOAD=1` forces model load on backend startup (not recommended on 8GB).
+- `NAEYLA_ENABLE_MEMORY=1` enables memory system initialization.
+- `NAEYLA_RELOAD=1` enables auto-reload in `npm run dev`.
+
+## Troubleshooting
+
+- If the UI says the backend is not responding, check `/Users/shanthanu/naeyla-xs/naeyla_backend.log`.
+- If you see auth errors, verify `.env` and `.env.local` tokens match.
 
 
 ## Security
@@ -107,7 +129,6 @@ naeyla-xs/
 - Tokens stored in `.env` files (git ignored)
 - Backend validates auth on every request
 - Frontend injects token via environment variables
-- code is secure
 
 
 ## Credits

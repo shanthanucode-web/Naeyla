@@ -108,7 +108,7 @@ def parse_action_from_text(text: str) -> List[Action]:
         try:
             action = Action.from_dsl(f"<|action|>{action_str}")
             actions.append(action)
-        except:
+        except Exception:
             continue
     
     return actions
