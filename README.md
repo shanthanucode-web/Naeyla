@@ -2,7 +2,7 @@
 
 **Personal AI Assistant running locally on Apple Silicon**
 
-Naeyla is a 1.5B parameter language model (Qwen 2.5) running entirely on-device using Apple's MLX framework. No cloud, no external APIs, just a personal AI companion.
+Naeyla is a 1.5B parameter language model (Qwen 2.5) running entirely on-device using Apple's MLX framework. No cloud, no external APIs — just a personal AI companion.
 
 ## Features
 
@@ -14,21 +14,21 @@ Naeyla is a 1.5B parameter language model (Qwen 2.5) running entirely on-device 
 
 ## Tech Stack
 
-- **Model**: Qwen 2.5-1.5B-Instruct (4-bit quantized)
-- **Framework**: MLX (Apple's ML framework)
+- **Model**: Qwen 2.5-1.5B-Instruct
+- **Inference**: MLX (Apple's ML framework)
 - **Backend**: FastAPI with token auth
-- **Frontend**: Tauri (native app)
+- **Frontend**: Tauri + Vite (native app)
 - **Platform**: macOS (Apple Silicon)
 
 ## Quick Start
 
-Launch the native app (it will auto-start the backend if needed):
+Launch the native app (auto-starts the backend):
 ```bash
 cd tauri-app/naeyla-native
 npm run tauri dev
 ```
 
-Alternatively, run both in dev from the repo root:
+Or run both together from the repo root:
 ```bash
 npm run dev
 ```
@@ -36,105 +36,119 @@ npm run dev
 ## Setup
 
 ### Requirements
+
 - macOS with Apple Silicon (M1/M2/M3)
 - 8GB+ RAM
 - Python 3.11+
 - Node.js 18+ and npm
 - Rust toolchain (for Tauri)
 
-### Installation
+### 1. Clone
 
-Clone the repo
+```bash
 git clone https://github.com/shanthanucode-web/Naeyla.git
-cd naeyla-xs
+cd Naeyla
+```
 
-### Backend Setup
-Create virtual environment
+### 2. Python environment
+
+```bash
 python3.11 -m venv venv
 source venv/bin/activate
-
-Install dependencies
-pip install mlx mlx-lm transformers huggingface-hub
-pip install fastapi uvicorn playwright python-multipart python-dotenv
+pip install mlx mlx-lm transformers huggingface-hub python-dotenv
+pip install fastapi uvicorn playwright python-multipart
 pip install sentence-transformers numpy
+playwright install chromium
+```
 
-Download the model (1.5GB)
+### 3. Download the model (~1.5 GB)
+
+```bash
 mkdir -p models
 huggingface-cli download Qwen/Qwen2.5-1.5B-Instruct --local-dir models/qwen2.5-1.5b
+```
 
-Install Playwright browser
-playwright install chromium
+### 4. Frontend dependencies
 
-### Configuration
+```bash
+cd tauri-app/naeyla-native
+npm install
+cd ../..
+```
 
-Create `.env` in the root directory:
-echo "NAEYLA_TOKEN=$(openssl rand -base 64 32)">.env
+### 5. Configure tokens
 
-Create `tauri-app/naeyla-native/.env.local`:
-echo "VITE_NAEYLA_TOKEN=your_token_here" > tauri-app/naeyla-native/.env.local
-The frontend token must match `NAEYLA_TOKEN`.
+Generate a secret token and write both config files:
 
-### Running Naeyla
+```bash
+TOKEN=$(openssl rand -base64 32)
+echo "NAEYLA_TOKEN=$TOKEN" > .env
+echo "VITE_NAEYLA_TOKEN=$TOKEN" > tauri-app/naeyla-native/.env.local
+```
 
-**Option A (recommended):**
+Both files are git-ignored. The backend reads `NAEYLA_TOKEN` and the frontend reads `VITE_NAEYLA_TOKEN` — they must match.
+
+## Running Naeyla
+
+**Option A — recommended (auto-starts backend):**
+
 ```bash
 cd tauri-app/naeyla-native
 npm run tauri dev
 ```
 
-**Option B (manual, two terminals):**
+**Option B — manual (two terminals):**
 
-Terminal 1 - Backend
-Start the server
+```bash
+# Terminal 1: backend
 source venv/bin/activate
-uvicorn app.server_secure:app --host 127.0.0.1 --port 7861 --reload
+uvicorn app.server_secure:app --host 127.0.0.1 --port 7861
 
-Terminal 2 - Frontend
+# Terminal 2: frontend
 cd tauri-app/naeyla-native
-npm install
 npm run tauri dev
-
-## Project Status
-
-Active development. Core chat flow and UI are working; browser actions are experimental; memory storage exists but is not yet integrated into chat responses by default.
-
-## Philosophy
-
-Naeyla is an attempt to make a **personal cognitive organism**. She learns from one user and evolves with them. This is an experiment in building a unified AI consciousness that perceives, reasons, acts, and remembers within a single neural architecture.
+```
 
 ## Architecture
 
-See `ARCHITECTURE.md` for a concise codebase tour and a runtime sequence diagram.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for a full codebase tour and runtime sequence diagram.
 
 ## Runtime Notes
 
-- The native app attempts to auto-start the backend on launch.
-- The MLX model is lazy-loaded on the first chat request to reduce startup load.
+- The native app auto-starts the backend on launch and polls `/health` before sending the first message.
+- The MLX model is lazy-loaded on the first chat request to reduce startup time and memory pressure.
 - Memory indexing is disabled by default; enable with `NAEYLA_ENABLE_MEMORY=1`.
 
 ## Dev Flags
 
-- `NAEYLA_EAGER_LOAD=1` forces model load on backend startup (not recommended on 8GB).
-- `NAEYLA_ENABLE_MEMORY=1` enables memory system initialization.
-- `NAEYLA_RELOAD=1` enables auto-reload in `npm run dev`.
+| Flag | Effect |
+|------|--------|
+| `NAEYLA_EAGER_LOAD=1` | Load model at server startup (not recommended on 8 GB) |
+| `NAEYLA_ENABLE_MEMORY=1` | Enable memory system initialisation |
+| `NAEYLA_RELOAD=1` | Enable uvicorn auto-reload in `npm run dev` |
 
 ## Troubleshooting
 
-- If the UI says the backend is not responding, check `/Users/shanthanu/naeyla-xs/naeyla_backend.log`.
-- If you see auth errors, verify `.env` and `.env.local` tokens match.
-
+- **Backend not responding** — check `naeyla_backend.log` in the repo root.
+- **Auth errors** — verify that `NAEYLA_TOKEN` in `.env` matches `VITE_NAEYLA_TOKEN` in `tauri-app/naeyla-native/.env.local`.
+- **Model not found** — confirm the model was downloaded to `models/qwen2.5-1.5b`.
 
 ## Security
 
-- Tokens stored in `.env` files (git ignored)
-- Backend validates auth on every request
-- Frontend injects token via environment variables
+See [SECURITY.md](SECURITY.md) for a full breakdown of the security model, token management, and known limitations.
 
+## Project Status
+
+Active development. Core chat and UI are working; browser automation is experimental; memory storage is scaffolded but not yet wired into chat responses.
+
+## Philosophy
+
+Naeyla is an attempt to build a **personal cognitive organism** — an AI that learns from one person and evolves with them. An experiment in unified perception, reasoning, action, and memory within a single neural architecture.
 
 ## Credits
 
-Built by Shanthanu with guidance from Perplexity AI.  
-Inspired by the vision of personal, lifelong AI companions and Jarvis.
+Built by Shanthanu.
+Inspired by the vision of personal, lifelong AI companions.
 
 ---
 
