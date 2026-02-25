@@ -9,6 +9,7 @@ NAEYLA-XS Secure FastAPI Server
 import os
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
+from app.memory.embeddings import MemoryRetriever
 from fastapi import FastAPI, HTTPException, Header, Query, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -114,6 +115,7 @@ print(f"🔒 Binding to: 127.0.0.1:7861 (localhost only)")
 
 naeyla = NaeylaBackbone()
 browser = BrowserController()
+memory = MemoryRetriever()
 print("✅ Ready!")
 
 # ==================== MODELS ====================
