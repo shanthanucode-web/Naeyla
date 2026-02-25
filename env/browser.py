@@ -6,8 +6,6 @@ Uses Playwright to control Chrome/Chromium
 from playwright.async_api import async_playwright, Browser, Page
 import asyncio
 from typing import Optional, Dict, Any
-import sys
-sys.path.append('.')
 
 from dsl.actions import Action, ActionType
 from env.axtree import AXTreeExtractor
@@ -149,11 +147,16 @@ class BrowserController:
             
             elif action.action_type == ActionType.SCROLL:
                 direction = action.params.get("direction", "down")
-                amount = action.params.get("amount", 500)
+                # Cast to int to prevent JS injection via string interpolation into evaluate()
+                try:
+                    amount = int(action.params.get("amount", 500))
+                except (TypeError, ValueError):
+                    amount = 500
+                amount = max(0, min(amount, 10000))  # clamp to a sane range
                 if direction == "down":
-                    await self.page.evaluate(f"window.scrollBy(0, {amount})")
+                    await self.page.evaluate("(n) => window.scrollBy(0, n)", amount)
                 else:
-                    await self.page.evaluate(f"window.scrollBy(0, -{amount})")
+                    await self.page.evaluate("(n) => window.scrollBy(0, -n)", amount)
                 result["success"] = True
             
         except Exception as e:

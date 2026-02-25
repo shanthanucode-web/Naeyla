@@ -93,14 +93,13 @@ pub fn run() {
         .setup(|app| {
             let handle = app.handle().clone();
 
-            // Best-effort backend auto-start for native app
-            let _ = ensure_backend();
+            // Best-effort backend auto-start for native app (runs in background to avoid blocking setup)
+            std::thread::spawn(|| { let _ = ensure_backend(); });
             
-            // Register global shortcut handler
+            // Register global shortcut to toggle window visibility
             #[allow(deprecated)]
-            app.global_shortcut().register("CmdOrCtrl+Shift+8")?;
-            
-            // Listen to shortcut events
+            app.global_shortcut().register("CmdOrCtrl+Shift+N")?;
+
             app.global_shortcut().on_shortcut("CmdOrCtrl+Shift+N", move |_app, _shortcut, _event| {
                 if let Some(window) = handle.get_webview_window("main") {
                     let _ = if window.is_visible().unwrap_or(false) {

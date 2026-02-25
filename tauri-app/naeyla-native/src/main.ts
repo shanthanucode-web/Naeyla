@@ -23,8 +23,11 @@ modeButtons.forEach(btn => {
     });
 });
 
-// NAEYLA Token - Keep this safe!
-const NAEYLA_TOKEN = import.meta.env.VITE_NAEYLA_TOKEN || 'default-dev-token';
+// NAEYLA Token - must be set in .env.local
+const NAEYLA_TOKEN: string = import.meta.env.VITE_NAEYLA_TOKEN;
+if (!NAEYLA_TOKEN) {
+    throw new Error('VITE_NAEYLA_TOKEN is not set. Create tauri-app/naeyla-native/.env.local with your token.');
+}
 let backendReady = false;
 
 function sleep(ms: number) {
@@ -44,7 +47,7 @@ async function ensureBackendReady() {
 
     for (let attempt = 0; attempt < 12; attempt++) {
         try {
-            const response = await fetch(`${API_URL}/health?token=${NAEYLA_TOKEN}`, {
+            const response = await fetch(`${API_URL}/health`, {
                 headers: {
                     'Authorization': `Bearer ${NAEYLA_TOKEN}`
                 }
@@ -77,9 +80,7 @@ async function sendMessage() {
     typingIndicator.classList.remove('hidden');
 
     try {
-        console.log('Sending with Authorization:', `Bearer ${NAEYLA_TOKEN}`);  // DEBUG
-        
-        const response = await fetch(`${API_URL}/chat?token=${NAEYLA_TOKEN}`, {
+        const response = await fetch(`${API_URL}/chat`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

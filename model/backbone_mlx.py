@@ -43,9 +43,6 @@ class NaeylaBackbone:
         browser_enabled: bool = False
     ) -> str:
         """Chat with mode conditioning"""
-        import sys
-        sys.path.append('.')
-
         if browser_enabled:
             from model.browser_prompts import get_browser_prompt
             mode_prompt = get_browser_prompt(mode)

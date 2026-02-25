@@ -9,14 +9,13 @@ NAEYLA-XS Secure FastAPI Server
 import os
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-from fastapi import FastAPI, HTTPException, Header, Query, Depends, status
+from fastapi import FastAPI, HTTPException, Header, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-import sys
-sys.path.append('.')
+from pydantic import BaseModel, field_validator
 import re
 import logging
 import asyncio
+import ipaddress
 from typing import Optional
 from urllib.parse import urlparse
 
@@ -40,9 +39,11 @@ ALLOWED_ACTIONS = {
     "get_text", "search", "get_links"
 }
 
-# Audit logging
+# Audit logging — use an absolute path so the log lands next to this file
+# regardless of the working directory the server is started from.
+_LOG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "naeyla_audit.log")
 logging.basicConfig(
-    filename="naeyla_audit.log",
+    filename=os.path.normpath(_LOG_PATH),
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
@@ -52,41 +53,55 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="NAEYLA-XS Secure", version="1.0.0")
 
-# CORS
+# CORS — restrict to the Tauri/Vite dev origin and packaged app origin.
+# allow_credentials is False because auth uses Authorization headers, not cookies.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=["http://localhost:1420", "tauri://localhost"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 # ==================== SECURITY FUNCTIONS ====================
 
-def get_token(
-    token: Optional[str] = Query(None),
-    authorization: Optional[str] = Header(None)
-) -> str:
-    if authorization:
-        if authorization.startswith("Bearer "):
-            token = authorization[7:].strip()
-    
-    if not token or token != NAEYLA_TOKEN:
-        raise HTTPException(status_code=401, detail="Invalid token")
-    
-    return token
+def get_token(authorization: Optional[str] = Header(None)) -> str:
+    """Accept token only via Authorization: Bearer header (not query params)."""
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization[7:].strip()
+        if token == NAEYLA_TOKEN:
+            return token
+    raise HTTPException(status_code=401, detail="Invalid token")
 
+
+_BLOCKED_HOSTS = {
+    "localhost", "localhost.",
+    "127.0.0.1", "0.0.0.0",
+    "::1", "[::1]",
+    # Cloud metadata services
+    "169.254.169.254", "metadata.google.internal",
+}
 
 def validate_url(url: str) -> bool:
-    """Only allow safe URLs"""
+    """Block localhost, private networks, and cloud metadata endpoints."""
     try:
         parsed = urlparse(url)
         if parsed.scheme not in ("http", "https"):
             return False
-        if parsed.hostname in ("127.0.0.1", "localhost", "0.0.0.0"):
+        hostname = parsed.hostname
+        if not hostname:
             return False
+        if hostname.lower() in _BLOCKED_HOSTS:
+            return False
+        # Block all RFC-1918 private ranges and loopback via ipaddress
+        try:
+            addr = ipaddress.ip_address(hostname)
+            if addr.is_loopback or addr.is_private or addr.is_link_local or addr.is_reserved:
+                return False
+        except ValueError:
+            pass  # Not a bare IP address — hostname, proceed
         return True
-    except:
+    except Exception:
         return False
 
 def validate_action(action_dict: dict) -> bool:
@@ -108,7 +123,7 @@ def validate_action(action_dict: dict) -> bool:
 # ==================== INITIALIZATION ====================
 
 print("🚀 Starting NAEYLA-XS Secure Server...")
-print(f"🔐 Token auth: ENABLED (Header + Query Param)")
+print(f"🔐 Token auth: ENABLED (Authorization: Bearer header only)")
 print(f"🔒 Binding to: 127.0.0.1:7861 (localhost only)")
 
 NAEYLA_EAGER_LOAD = os.getenv("NAEYLA_EAGER_LOAD") == "1"
@@ -159,9 +174,27 @@ print("✅ Ready!")
 
 # ==================== MODELS ====================
 
+_ALLOWED_MODES = {"companion", "advisor", "guardian"}
+
 class ChatRequest(BaseModel):
     message: str
     mode: str = "companion"
+
+    @field_validator("message")
+    @classmethod
+    def message_not_empty_or_too_long(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("message must not be empty")
+        if len(v) > 8000:
+            raise ValueError("message exceeds maximum length of 8000 characters")
+        return v
+
+    @field_validator("mode")
+    @classmethod
+    def mode_must_be_valid(cls, v: str) -> str:
+        if v not in _ALLOWED_MODES:
+            raise ValueError(f"mode must be one of {sorted(_ALLOWED_MODES)}")
+        return v
 
 class BrowserActionRequest(BaseModel):
     action: str
@@ -230,9 +263,11 @@ async def chat(request: ChatRequest, token: str = Depends(get_token)):
         
         return ChatResponse(response=response_clean, mode=request.mode, actions=action_results)
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"❌ Error: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/browser/action")
 async def execute_browser_action(request: BrowserActionRequest, token: str = Depends(get_token)):

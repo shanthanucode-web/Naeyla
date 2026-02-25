@@ -1,7 +1,6 @@
 import numpy as np
 from sentence_transformers import SentenceTransformer
-import pickle
-from typing import List, Dict, Tuple
+from typing import List, Dict
 from .database import MemoryDatabase
 
 class MemoryRetriever:
@@ -36,7 +35,7 @@ class MemoryRetriever:
         
         cursor.execute(
             "INSERT INTO embeddings (conversation_id, embedding) VALUES (?, ?)",
-            (message_id, pickle.dumps(embedding))
+            (message_id, embedding.astype(np.float32).tobytes())
         )
         
         conn.commit()
@@ -76,7 +75,7 @@ class MemoryRetriever:
         results = []
         for row in cursor.fetchall():
             msg_id, role, content, timestamp, embedding_blob = row
-            embedding = pickle.loads(embedding_blob)
+            embedding = np.frombuffer(embedding_blob, dtype=np.float32)
             
             # Cosine similarity
             similarity = np.dot(query_embedding, embedding) / (
