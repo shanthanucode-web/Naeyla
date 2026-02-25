@@ -26,7 +26,11 @@ echo "Starting backend on http://127.0.0.1:7861 ..."
   cd "$ROOT_DIR"
   # shellcheck disable=SC1091
   source venv/bin/activate
-  uvicorn app.server_secure:app --host 127.0.0.1 --port 7861 --reload
+  if [[ "${NAEYLA_RELOAD:-}" == "1" ]]; then
+    uvicorn app.server_secure:app --host 127.0.0.1 --port 7861 --reload
+  else
+    uvicorn app.server_secure:app --host 127.0.0.1 --port 7861
+  fi
 ) &
 BACKEND_PID=$!
 
@@ -40,4 +44,3 @@ if [[ ! -d node_modules ]]; then
 fi
 
 npm run tauri dev
-

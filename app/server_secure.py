@@ -9,7 +9,6 @@ NAEYLA-XS Secure FastAPI Server
 import os
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-from app.memory.embeddings import MemoryRetriever
 from fastapi import FastAPI, HTTPException, Header, Query, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -21,7 +20,6 @@ import asyncio
 from typing import Optional
 from urllib.parse import urlparse
 
-from model.backbone_mlx import NaeylaBackbone
 from env.browser import BrowserController
 from dsl.actions import Action, ActionType, parse_action_from_text
 
@@ -113,9 +111,50 @@ print("🚀 Starting NAEYLA-XS Secure Server...")
 print(f"🔐 Token auth: ENABLED (Header + Query Param)")
 print(f"🔒 Binding to: 127.0.0.1:7861 (localhost only)")
 
-naeyla = NaeylaBackbone()
-browser = BrowserController()
-memory = MemoryRetriever()
+NAEYLA_EAGER_LOAD = os.getenv("NAEYLA_EAGER_LOAD") == "1"
+NAEYLA_ENABLE_MEMORY = os.getenv("NAEYLA_ENABLE_MEMORY") == "1"
+
+naeyla = None
+browser = None
+memory = None
+naeyla_lock = asyncio.Lock()
+memory_lock = asyncio.Lock()
+
+def get_browser() -> BrowserController:
+    global browser
+    if browser is None:
+        browser = BrowserController()
+    return browser
+
+async def get_naeyla():
+    global naeyla
+    if naeyla is None:
+        async with naeyla_lock:
+            if naeyla is None:
+                from model.backbone_mlx import NaeylaBackbone
+                naeyla = await asyncio.to_thread(NaeylaBackbone)
+    return naeyla
+
+async def get_memory():
+    global memory
+    if not NAEYLA_ENABLE_MEMORY:
+        return None
+    if memory is None:
+        async with memory_lock:
+            if memory is None:
+                from app.memory.embeddings import MemoryRetriever
+                memory = await asyncio.to_thread(MemoryRetriever)
+    return memory
+
+if NAEYLA_EAGER_LOAD:
+    # Optional eager load for warm starts (use with caution on low-memory systems).
+    from model.backbone_mlx import NaeylaBackbone
+    naeyla = NaeylaBackbone()
+    browser = BrowserController()
+    if NAEYLA_ENABLE_MEMORY:
+        from app.memory.embeddings import MemoryRetriever
+        memory = MemoryRetriever()
+
 print("✅ Ready!")
 
 # ==================== MODELS ====================
@@ -143,6 +182,7 @@ async def chat(request: ChatRequest, token: str = Depends(get_token)):
         from model.action_parser import extract_actions_from_message, should_trigger_browser
         
         page_context = ""
+        browser = get_browser()
         if browser.is_running:
             perception = await browser.get_page_perception()
             if perception.get("success"):
@@ -152,10 +192,12 @@ async def chat(request: ChatRequest, token: str = Depends(get_token)):
         if page_context and ("see" in request.message.lower() or "page" in request.message.lower()):
             message_with_context = f"{request.message}\n\n{page_context}"
         
-        response = naeyla.chat(
+        naeyla = await get_naeyla()
+        response = await asyncio.to_thread(
+            naeyla.chat,
             message_with_context,
-            mode=request.mode,
-            browser_enabled=should_trigger_browser(request.message)
+            request.mode,
+            should_trigger_browser(request.message)
         )
         
         response_clean = re.sub(r'<\|action\|>.*?(?=<\||$)', '', response, flags=re.DOTALL).strip()
@@ -200,6 +242,7 @@ async def execute_browser_action(request: BrowserActionRequest, token: str = Dep
         logger.warning(f"🚨 [SECURITY] Blocked: {request.action}")
         raise HTTPException(status_code=400, detail="Action not allowed")
     
+    browser = get_browser()
     action = Action(action_type=ActionType(request.action), params=request.params)
     result = await browser.execute_action(action)
     logger.info(f"✅ [AUDIT] Direct action: {request.action}")
@@ -211,13 +254,17 @@ async def health(token: str = Depends(get_token)):
     return {
         "status": "ok",
         "model": "Qwen 2.5-1.5B",
-        "browser": browser.is_running,
-        "security": "enabled"
+        "browser": get_browser().is_running,
+        "security": "enabled",
+        "model_loaded": naeyla is not None,
+        "memory_enabled": NAEYLA_ENABLE_MEMORY,
+        "memory_loaded": memory is not None
     }
 
 @app.get("/browser/context")
 async def get_browser_context(token: str = Depends(get_token)):
     """Get browser state"""
+    browser = get_browser()
     if not browser.is_running:
         return {"running": False}
     return {"running": True, **await browser.get_page_context()}
@@ -225,6 +272,7 @@ async def get_browser_context(token: str = Depends(get_token)):
 @app.get("/browser/perception")
 async def get_browser_perception(token: str = Depends(get_token)):
     """Get AI perception"""
+    browser = get_browser()
     if not browser.is_running:
         return {"running": False}
     return await browser.get_page_perception()
@@ -232,7 +280,8 @@ async def get_browser_perception(token: str = Depends(get_token)):
 @app.on_event("shutdown")
 async def shutdown():
     logger.info("🛑 Server shutdown")
-    await browser.stop()
+    if browser is not None:
+        await browser.stop()
 
 if __name__ == "__main__":
     import uvicorn
