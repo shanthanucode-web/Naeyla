@@ -1,5 +1,5 @@
 """
-NAEYLA-XS Model Backbone (Qwen 2.5-1.5B with MLX)
+NAEYLA-XS Model Backbone (Qwen 2.5-3B with MLX)
 """
 
 import mlx.core as mx
@@ -7,9 +7,9 @@ from mlx_lm import load, generate
 from pathlib import Path
 
 class NaeylaBackbone:
-    """Qwen 2.5-1.5B backbone for NAEYLA-XS"""
-    
-    def __init__(self, model_path: str = "models/qwen2.5-1.5b"):
+    """Qwen 2.5-3B backbone for NAEYLA-XS"""
+
+    def __init__(self, model_path: str = "models/qwen2.5-3b"):
         """Load the model"""
         print("🧠 Loading Naeyla backbone...")
         

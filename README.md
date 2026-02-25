@@ -2,7 +2,7 @@
 
 **Personal AI Assistant running locally on Apple Silicon**
 
-Naeyla is a 1.5B parameter language model (Qwen 2.5) running entirely on-device using Apple's MLX framework. No cloud, no external APIs, just a personal AI companion.
+Naeyla is a 3B parameter language model (Qwen 2.5) running entirely on-device using Apple's MLX framework. No cloud, no external APIs, just a personal AI companion.
 
 ## Features
 
@@ -14,7 +14,7 @@ Naeyla is a 1.5B parameter language model (Qwen 2.5) running entirely on-device 
 
 ## Tech Stack
 
-- **Model**: Qwen 2.5-1.5B-Instruct
+- **Model**: Qwen 2.5-3B-Instruct (4-bit, via mlx-community)
 - **Inference**: MLX (Apple's ML framework)
 - **Backend**: FastAPI with token auth
 - **Frontend**: Tauri + Vite (native app)
@@ -65,7 +65,7 @@ playwright install chromium
 
 ```bash
 mkdir -p models
-huggingface-cli download Qwen/Qwen2.5-1.5B-Instruct --local-dir models/qwen2.5-1.5b
+huggingface-cli download mlx-community/Qwen2.5-3B-Instruct-4bit --local-dir models/qwen2.5-3b
 ```
 
 ### 4. Frontend dependencies
@@ -131,7 +131,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for a full codebase tour and runtime sequ
 
 - **Backend not responding** — check `naeyla_backend.log` in the repo root.
 - **Auth errors** — verify that `NAEYLA_TOKEN` in `.env` matches `VITE_NAEYLA_TOKEN` in `tauri-app/naeyla-native/.env.local`.
-- **Model not found** — confirm the model was downloaded to `models/qwen2.5-1.5b`.
+- **Model not found** — confirm the model was downloaded to `models/qwen2.5-3b`.
 
 ## Security
 
