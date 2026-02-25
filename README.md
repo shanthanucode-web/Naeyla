@@ -10,7 +10,7 @@ Naeyla is a 1.5B parameter language model (Qwen 2.5) running entirely on-device 
 - **Native desktop UI** with real-time chat (Tauri + Vite)
 - **Runs locally** on Apple Silicon with MLX acceleration
 - **Browser automation** via Playwright (experimental)
-- **Memory store scaffolding** (SQLite + embeddings; not yet used in chat responses)
+- **Memory store scaffolding** (SQLite + embeddings; disabled by default)
 
 ## Tech Stack
 
@@ -22,14 +22,15 @@ Naeyla is a 1.5B parameter language model (Qwen 2.5) running entirely on-device 
 
 ## Quick Start
 
-Run backend + frontend together:
+Launch the native app (it will auto-start the backend if needed):
 ```bash
-npm run dev
+cd tauri-app/naeyla-native
+npm run tauri dev
 ```
 
-Or directly:
+Alternatively, run both in dev from the repo root:
 ```bash
-./run_dev.sh
+npm run dev
 ```
 
 ## Setup
@@ -66,7 +67,7 @@ playwright install chromium
 
 ### Configuration
 
-Create '.env' in the root directory:
+Create `.env` in the root directory:
 echo "NAEYLA_TOKEN=$(openssl rand -base 64 32)">.env
 
 Create `tauri-app/naeyla-native/.env.local`:
@@ -77,7 +78,8 @@ The frontend token must match `NAEYLA_TOKEN`.
 
 **Option A (recommended):**
 ```bash
-npm run dev
+cd tauri-app/naeyla-native
+npm run tauri dev
 ```
 
 **Option B (manual, two terminals):**
@@ -94,7 +96,7 @@ npm run tauri dev
 
 ## Project Status
 
-Active development. Core chat flow and UI are working; browser actions are experimental; memory storage exists but is not fully integrated into chat responses.
+Active development. Core chat flow and UI are working; browser actions are experimental; memory storage exists but is not yet integrated into chat responses by default.
 
 ## Philosophy
 
@@ -103,6 +105,23 @@ Naeyla is an attempt to make a **personal cognitive organism**. She learns from 
 ## Architecture
 
 See `ARCHITECTURE.md` for a concise codebase tour and a runtime sequence diagram.
+
+## Runtime Notes
+
+- The native app attempts to auto-start the backend on launch.
+- The MLX model is lazy-loaded on the first chat request to reduce startup load.
+- Memory indexing is disabled by default; enable with `NAEYLA_ENABLE_MEMORY=1`.
+
+## Dev Flags
+
+- `NAEYLA_EAGER_LOAD=1` forces model load on backend startup (not recommended on 8GB).
+- `NAEYLA_ENABLE_MEMORY=1` enables memory system initialization.
+- `NAEYLA_RELOAD=1` enables auto-reload in `npm run dev`.
+
+## Troubleshooting
+
+- If the UI says the backend is not responding, check `/Users/shanthanu/naeyla-xs/naeyla_backend.log`.
+- If you see auth errors, verify `.env` and `.env.local` tokens match.
 
 
 ## Security
